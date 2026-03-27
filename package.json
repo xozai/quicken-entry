@@ -1,0 +1,79 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "quicken-entry",
+  "title": "Quicken Entry",
+  "description": "Quickly enter transactions into Quicken for Mac without leaving your workflow",
+  "icon": "extension-icon.png",
+  "author": "jleos",
+  "categories": ["Finance"],
+  "license": "MIT",
+  "commands": [
+    {
+      "name": "add-transaction",
+      "title": "Add Transaction",
+      "subtitle": "Quicken",
+      "description": "Add a transaction to Quicken using a full form",
+      "mode": "view"
+    },
+    {
+      "name": "quick-expense",
+      "title": "Quick Expense",
+      "subtitle": "Quicken",
+      "description": "Enter a transaction with natural language, e.g. \"$45 Starbucks :Food\"",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "defaultAccount",
+      "title": "Default Account",
+      "description": "Account used for Quick Expense and as the default for Add Transaction",
+      "type": "textfield",
+      "required": true,
+      "placeholder": "Checking"
+    },
+    {
+      "name": "accounts",
+      "title": "Accounts",
+      "description": "Comma-separated list of your Quicken account names (must match exactly)",
+      "type": "textfield",
+      "required": true,
+      "placeholder": "Checking, Savings, Visa, Amex"
+    },
+    {
+      "name": "categories",
+      "title": "Categories",
+      "description": "Comma-separated list of Quicken categories for the dropdown",
+      "type": "textfield",
+      "required": false,
+      "placeholder": "Food & Dining, Gas & Fuel, Shopping, Utilities"
+    },
+    {
+      "name": "bringToForeground",
+      "title": "Quicken Window",
+      "label": "Bring Quicken to the foreground after entering a transaction",
+      "description": "When disabled, Quicken stays in the background after the transaction is saved",
+      "type": "checkbox",
+      "required": false,
+      "default": false
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "^1.79.0"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^1.0.11",
+    "@types/node": "^20.8.10",
+    "@types/react": "^19.0.0",
+    "eslint": "^8.57.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.4.5"
+  },
+  "scripts": {
+    "build": "ray build -e dist",
+    "dev": "ray develop",
+    "fix-lint": "ray lint --fix",
+    "lint": "ray lint",
+    "publish": "npx @raycast/api@latest publish"
+  }
+}
