@@ -153,8 +153,11 @@ export function checkAccessibilityPermissions(): boolean {
   try {
     execFileSync(
       "osascript",
-      ["-e", 'tell application "System Events" to return name of first process whose frontmost is true'],
-      { timeout: 5000 }
+      [
+        "-e",
+        'tell application "System Events" to return name of first process whose frontmost is true',
+      ],
+      { timeout: 5000 },
     );
     return true;
   } catch {
@@ -170,7 +173,7 @@ export function isQuickenInstalled(): boolean {
     const result = execFileSync(
       "mdfind",
       ["kMDItemCFBundleIdentifier == 'com.quicken.Quicken'"],
-      { timeout: 5000 }
+      { timeout: 5000 },
     )
       .toString()
       .trim();
@@ -226,15 +229,15 @@ export function enterTransaction(transaction: Transaction): Promise<void> {
               new Error(
                 "Accessibility access is not enabled for Raycast.\n\n" +
                   "Open System Settings → Privacy & Security → Accessibility\n" +
-                  "and enable the toggle next to Raycast."
-              )
+                  "and enable the toggle next to Raycast.",
+              ),
             );
           } else if (msg.includes("Can't get process")) {
             reject(
               new Error(
                 "Quicken does not appear to be running and could not be launched.\n" +
-                  "Check that Quicken is installed at /Applications/Quicken.app."
-              )
+                  "Check that Quicken is installed at /Applications/Quicken.app.",
+              ),
             );
           } else {
             reject(new Error(msg || "Unknown AppleScript error"));
@@ -242,7 +245,7 @@ export function enterTransaction(transaction: Transaction): Promise<void> {
         } else {
           resolve();
         }
-      }
+      },
     );
   });
 }

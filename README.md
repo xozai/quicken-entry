@@ -10,6 +10,18 @@
 
 ---
 
+## Screenshots
+
+| Add Transaction | Quick Expense |
+|---|---|
+| ![Add Transaction](assets/screenshots/01-add-transaction.png) | ![Quick Expense](assets/screenshots/02-quick-expense.png) |
+
+| Accessibility Guard | Preferences |
+|---|---|
+| ![Accessibility Guard](assets/screenshots/03-accessibility-guard.png) | ![Preferences](assets/screenshots/04-preferences.png) |
+
+---
+
 ## Features
 
 - **Add Transaction** — full form with account dropdown, date, payee, category, amount, and memo

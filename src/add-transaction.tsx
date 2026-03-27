@@ -9,8 +9,17 @@ import {
   Detail,
 } from "@raycast/api";
 import { useState, useEffect } from "react";
-import { enterTransaction, checkAccessibilityPermissions, isQuickenInstalled } from "./utils/applescript";
-import { getRecentCategories, addRecentPayee, addRecentCategory, mergeUnique } from "./utils/storage";
+import {
+  enterTransaction,
+  checkAccessibilityPermissions,
+  isQuickenInstalled,
+} from "./utils/applescript";
+import {
+  getRecentCategories,
+  addRecentPayee,
+  addRecentCategory,
+  mergeUnique,
+} from "./utils/storage";
 
 interface Preferences {
   defaultAccount: string;
@@ -31,7 +40,11 @@ interface FormValues {
 // ---------------------------------------------------------------------------
 // Accessibility / installation guard — shown before the main form
 // ---------------------------------------------------------------------------
-function AccessibilityWarning({ reason }: { reason: "permissions" | "not-installed" }) {
+function AccessibilityWarning({
+  reason,
+}: {
+  reason: "permissions" | "not-installed";
+}) {
   const md =
     reason === "not-installed"
       ? `# Quicken Not Found
@@ -62,7 +75,10 @@ This extension uses macOS **Accessibility** APIs to control Quicken's UI.
               target="x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
             />
           )}
-          <Action title="Open Extension Preferences" onAction={openExtensionPreferences} />
+          <Action
+            title="Open Extension Preferences"
+            onAction={openExtensionPreferences}
+          />
         </ActionPanel>
       }
     />
@@ -94,7 +110,9 @@ export default function AddTransaction() {
 
   // Guard: check installation + permissions once on mount
   const [ready, setReady] = useState<boolean | null>(null); // null = loading
-  const [guardReason, setGuardReason] = useState<"permissions" | "not-installed" | null>(null);
+  const [guardReason, setGuardReason] = useState<
+    "permissions" | "not-installed" | null
+  >(null);
 
   // Categories merged from recent usage + preferences
   const [allCategories, setAllCategories] = useState<string[]>([]);
@@ -133,7 +151,8 @@ export default function AddTransaction() {
 
   // ── Guard screens ──────────────────────────────────────────────────────────
   if (ready === null) return <Form isLoading />;
-  if (!ready && guardReason) return <AccessibilityWarning reason={guardReason} />;
+  if (!ready && guardReason)
+    return <AccessibilityWarning reason={guardReason} />;
 
   const accounts = prefs.accounts
     .split(",")
@@ -164,12 +183,18 @@ export default function AddTransaction() {
     }
 
     if (!values.payee.trim()) {
-      await showToast({ style: Toast.Style.Failure, title: "Payee is required" });
+      await showToast({
+        style: Toast.Style.Failure,
+        title: "Payee is required",
+      });
       return;
     }
 
     setIsSubmitting(true);
-    const toast = await showToast({ style: Toast.Style.Animated, title: "Entering transaction in Quicken…" });
+    const toast = await showToast({
+      style: Toast.Style.Animated,
+      title: "Entering transaction in Quicken…",
+    });
 
     try {
       await enterTransaction({
@@ -183,7 +208,10 @@ export default function AddTransaction() {
       });
 
       // Persist to recent lists
-      await Promise.all([addRecentPayee(values.payee.trim()), addRecentCategory(values.category)]);
+      await Promise.all([
+        addRecentPayee(values.payee.trim()),
+        addRecentCategory(values.category),
+      ]);
 
       toast.style = Toast.Style.Success;
       toast.title = "Transaction saved";
@@ -212,30 +240,51 @@ export default function AddTransaction() {
             shortcut={{ modifiers: ["cmd"], key: "t" }}
             onAction={() => setIsExpense((e) => !e)}
           />
-          <Action title="Open Extension Preferences" onAction={openExtensionPreferences} />
+          <Action
+            title="Open Extension Preferences"
+            onAction={openExtensionPreferences}
+          />
         </ActionPanel>
       }
     >
       {/* Type badge */}
       <Form.Description
         title="Type"
-        text={isExpense ? "💸 Expense   (⌘T to switch to Income)" : "💰 Income   (⌘T to switch to Expense)"}
+        text={
+          isExpense
+            ? "💸 Expense   (⌘T to switch to Income)"
+            : "💰 Income   (⌘T to switch to Expense)"
+        }
       />
 
       <Form.Separator />
 
       {/* Account */}
-      <Form.Dropdown id="account" title="Account" defaultValue={prefs.defaultAccount}>
+      <Form.Dropdown
+        id="account"
+        title="Account"
+        defaultValue={prefs.defaultAccount}
+      >
         {accounts.map((acct) => (
           <Form.Dropdown.Item key={acct} value={acct} title={acct} />
         ))}
       </Form.Dropdown>
 
       {/* Date */}
-      <Form.TextField id="date" title="Date" defaultValue={todayFormatted()} placeholder="MM/DD/YYYY" />
+      <Form.TextField
+        id="date"
+        title="Date"
+        defaultValue={todayFormatted()}
+        placeholder="MM/DD/YYYY"
+      />
 
       {/* Payee */}
-      <Form.TextField id="payee" title="Payee" placeholder="Who did you pay?" autoFocus />
+      <Form.TextField
+        id="payee"
+        title="Payee"
+        placeholder="Who did you pay?"
+        autoFocus
+      />
 
       {/* Category */}
       <Form.Dropdown id="category" title="Category" defaultValue="">

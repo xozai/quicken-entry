@@ -24,7 +24,10 @@ export async function addRecentPayee(payee: string): Promise<void> {
 
   const existing = await getRecentPayees();
   // Move to front, dedup, cap length
-  const updated = [trimmed, ...existing.filter((p) => p !== trimmed)].slice(0, MAX_RECENT);
+  const updated = [trimmed, ...existing.filter((p) => p !== trimmed)].slice(
+    0,
+    MAX_RECENT,
+  );
   await LocalStorage.setItem(PAYEES_KEY, JSON.stringify(updated));
 }
 
@@ -47,7 +50,10 @@ export async function addRecentCategory(category: string): Promise<void> {
   if (!trimmed) return;
 
   const existing = await getRecentCategories();
-  const updated = [trimmed, ...existing.filter((c) => c !== trimmed)].slice(0, MAX_RECENT);
+  const updated = [trimmed, ...existing.filter((c) => c !== trimmed)].slice(
+    0,
+    MAX_RECENT,
+  );
   await LocalStorage.setItem(CATEGORIES_KEY, JSON.stringify(updated));
 }
 

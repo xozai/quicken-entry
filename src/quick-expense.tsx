@@ -9,7 +9,11 @@ import {
   Detail,
 } from "@raycast/api";
 import { useState, useEffect } from "react";
-import { enterTransaction, checkAccessibilityPermissions, isQuickenInstalled } from "./utils/applescript";
+import {
+  enterTransaction,
+  checkAccessibilityPermissions,
+  isQuickenInstalled,
+} from "./utils/applescript";
 import { addRecentPayee, addRecentCategory } from "./utils/storage";
 
 interface Preferences {
@@ -39,7 +43,9 @@ export function parseQuickExpense(raw: string): ParsedExpense | null {
   if (!input) return null;
 
   // Match: optional sign, optional $, amount, space, payee, optional :category
-  const match = input.match(/^([+-]?)\$?(\d+(?:\.\d{1,2})?)\s+(.+?)(?:\s+:(.+))?$/);
+  const match = input.match(
+    /^([+-]?)\$?(\d+(?:\.\d{1,2})?)\s+(.+?)(?:\s+:(.+))?$/,
+  );
   if (!match) return null;
 
   const sign = match[1]; // "+", "-", or ""
@@ -76,7 +82,11 @@ function formatPreview(p: ParsedExpense, account: string): string {
 // ---------------------------------------------------------------------------
 // Guard
 // ---------------------------------------------------------------------------
-function AccessibilityWarning({ reason }: { reason: "permissions" | "not-installed" }) {
+function AccessibilityWarning({
+  reason,
+}: {
+  reason: "permissions" | "not-installed";
+}) {
   const md =
     reason === "not-installed"
       ? `# Quicken Not Found\n\nInstall Quicken from [quicken.com](https://www.quicken.com) and relaunch this command.`
@@ -95,7 +105,10 @@ Open **System Settings → Privacy & Security → Accessibility** and enable **R
               target="x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
             />
           )}
-          <Action title="Open Extension Preferences" onAction={openExtensionPreferences} />
+          <Action
+            title="Open Extension Preferences"
+            onAction={openExtensionPreferences}
+          />
         </ActionPanel>
       }
     />
@@ -109,7 +122,9 @@ export default function QuickExpense() {
   const prefs = getPreferenceValues<Preferences>();
 
   const [ready, setReady] = useState<boolean | null>(null);
-  const [guardReason, setGuardReason] = useState<"permissions" | "not-installed" | null>(null);
+  const [guardReason, setGuardReason] = useState<
+    "permissions" | "not-installed" | null
+  >(null);
   const [inputValue, setInputValue] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -126,7 +141,8 @@ export default function QuickExpense() {
   }, []);
 
   if (ready === null) return <Form isLoading />;
-  if (!ready && guardReason) return <AccessibilityWarning reason={guardReason} />;
+  if (!ready && guardReason)
+    return <AccessibilityWarning reason={guardReason} />;
 
   const parsed = parseQuickExpense(inputValue);
 
@@ -142,7 +158,10 @@ export default function QuickExpense() {
     }
 
     setIsSubmitting(true);
-    const toast = await showToast({ style: Toast.Style.Animated, title: "Entering transaction in Quicken…" });
+    const toast = await showToast({
+      style: Toast.Style.Animated,
+      title: "Entering transaction in Quicken…",
+    });
 
     try {
       await enterTransaction({
@@ -155,7 +174,10 @@ export default function QuickExpense() {
         memo: "",
       });
 
-      await Promise.all([addRecentPayee(p.payee), p.category ? addRecentCategory(p.category) : Promise.resolve()]);
+      await Promise.all([
+        addRecentPayee(p.payee),
+        p.category ? addRecentCategory(p.category) : Promise.resolve(),
+      ]);
 
       toast.style = Toast.Style.Success;
       toast.title = "Transaction saved";
@@ -175,23 +197,32 @@ export default function QuickExpense() {
       actions={
         <ActionPanel>
           <Action.SubmitForm title="Add to Quicken" onSubmit={handleSubmit} />
-          <Action title="Open Extension Preferences" onAction={openExtensionPreferences} />
+          <Action
+            title="Open Extension Preferences"
+            onAction={openExtensionPreferences}
+          />
         </ActionPanel>
       }
     >
       <Form.TextField
         id="input"
         title="Transaction"
-        placeholder='$45 Starbucks :Food & Dining'
+        placeholder="$45 Starbucks :Food & Dining"
         onChange={setInputValue}
         autoFocus
       />
 
       {/* Live preview */}
       {parsed ? (
-        <Form.Description title="Preview" text={formatPreview(parsed, prefs.defaultAccount)} />
+        <Form.Description
+          title="Preview"
+          text={formatPreview(parsed, prefs.defaultAccount)}
+        />
       ) : inputValue.length > 0 ? (
-        <Form.Description title="Preview" text='⚠️  Cannot parse — use "$amount Payee [:Category]"' />
+        <Form.Description
+          title="Preview"
+          text='⚠️  Cannot parse — use "$amount Payee [:Category]"'
+        />
       ) : null}
 
       <Form.Separator />
