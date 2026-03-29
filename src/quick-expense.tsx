@@ -7,8 +7,9 @@ import {
   getPreferenceValues,
   openExtensionPreferences,
   Detail,
+  LaunchProps,
 } from "@raycast/api";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   enterTransaction,
   checkAccessibilityPermissions,
@@ -18,50 +19,105 @@ import { addRecentPayee, addRecentCategory } from "./utils/storage";
 
 interface Preferences {
   defaultAccount: string;
+  accounts: string;
   bringToForeground: boolean;
 }
 
 // ---------------------------------------------------------------------------
 // Natural-language parser
 //
-// Supported formats:
+// Supported formats (amount-first):
 //   $45 Starbucks
 //   $45.50 Starbucks :Food & Dining
 //   45 Netflix :Subscriptions
-//   +45 Paycheck :Income       (+ prefix = income)
-//   -12 Lunch :Food            (- prefix = expense, explicit)
+//   +45 Paycheck :Income         (+ prefix = income)
+//   -12 Lunch :Food              (- prefix = expense, explicit)
+//   $1,234.56 Rent               (comma-formatted amounts)
+//
+// Supported formats (payee-first):
+//   Starbucks $45
+//   Trader Joe's 87.43
+//   Starbucks $45 :Food
+//   Netflix +45                  (income, payee-first)
+//
+// Account override (append to any format):
+//   $45 Starbucks :Food @Visa
+//   45 Netflix @Amex
 // ---------------------------------------------------------------------------
 export interface ParsedExpense {
   amount: number;
   payee: string;
   category: string;
   isExpense: boolean;
+  account?: string;
 }
 
 export function parseQuickExpense(raw: string): ParsedExpense | null {
   const input = raw.trim();
   if (!input) return null;
 
-  // Match: optional sign, optional $, amount, space, payee, optional :category
-  const match = input.match(
-    /^([+-]?)\$?(\d+(?:\.\d{1,2})?)\s+(.+?)(?:\s+:(.+))?$/,
+  // Step 1: Extract @Account suffix — last whitespace-delimited token starting with @
+  let account: string | undefined;
+  let rest = input;
+  const atMatch = input.match(/^(.*)\s+@(\S+)$/);
+  if (atMatch) {
+    rest = atMatch[1].trim();
+    account = atMatch[2];
+  }
+
+  if (!rest) return null;
+
+  // Step 2: Try amount-first (original pattern, extended for comma-formatted numbers)
+  //   ^([+-]?)  \$?  (digits with optional commas + up to 2 decimals)  \s+  payee  optional :category
+  const amountFirst = rest.match(
+    /^([+-]?)\$?([\d,]+(?:\.\d{1,2})?)\s+(.+?)(?:\s+:(.+))?$/,
   );
-  if (!match) return null;
+  if (amountFirst) {
+    const sign = amountFirst[1];
+    const amount = parseFloat(amountFirst[2].replace(/,/g, ""));
+    const payee = amountFirst[3].trim();
+    const category = amountFirst[4]?.trim() ?? "";
+    if (!isNaN(amount) && amount > 0 && payee) {
+      return { amount, payee, category, isExpense: sign !== "+", account };
+    }
+  }
 
-  const sign = match[1]; // "+", "-", or ""
-  const amount = parseFloat(match[2]);
-  const payee = match[3].trim();
-  const category = match[4]?.trim() ?? "";
+  // Step 3: Try payee-first
+  //   payee (lazy)  \s+  optional sign/dollar  digits  optional :category
+  const payeeFirst = rest.match(
+    /^(.+?)\s+([+-]?\$?[\d,]+(?:\.\d{1,2})?)(?:\s+:(.+))?$/,
+  );
+  if (payeeFirst) {
+    const rawAmount = payeeFirst[2];
+    const signMatch = rawAmount.match(/^([+-])/);
+    const sign = signMatch ? signMatch[1] : "";
+    const amount = parseFloat(rawAmount.replace(/[+\-$,]/g, ""));
+    const payee = payeeFirst[1].trim();
+    const category = payeeFirst[3]?.trim() ?? "";
+    if (!isNaN(amount) && amount > 0 && payee) {
+      return { amount, payee, category, isExpense: sign !== "+", account };
+    }
+  }
 
-  if (isNaN(amount) || amount <= 0) return null;
-  if (!payee) return null;
+  return null;
+}
 
-  return {
-    amount,
-    payee,
-    category,
-    isExpense: sign !== "+",
-  };
+// Returns a specific hint when the parser fails, instead of a generic message.
+export function diagnoseParseFailure(raw: string): string {
+  const input = raw.replace(/\s+@\S+$/, "").trim();
+
+  if (/^[a-zA-Z]/.test(input) && /\$?\d/.test(input)) {
+    const firstWord = input.split(/\s+/)[0];
+    return `Try putting the amount first: "$45 ${firstWord}"`;
+  }
+  if (/\d{1,3},\d{3}/.test(input)) {
+    const fixed = input.replace(/(\d),(\d{3})/g, "$1$2");
+    return `Remove commas from the amount: "${fixed}"`;
+  }
+  if (/:[^ ]/.test(input)) {
+    return `Add a space before the colon: "… :Category"`;
+  }
+  return `Format: "$amount Payee [:Category] [@Account]"`;
 }
 
 function todayFormatted(): string {
@@ -73,14 +129,50 @@ function todayFormatted(): string {
   ].join("/");
 }
 
-function formatPreview(p: ParsedExpense, account: string): string {
+function formatPreview(p: ParsedExpense, defaultAccount: string): string {
   const sign = p.isExpense ? "−" : "+";
   const cat = p.category ? ` · ${p.category}` : "";
-  return `**${sign}$${p.amount.toFixed(2)}**  ${p.payee}${cat}  →  ${account}`;
+  const acct = p.account ?? defaultAccount;
+  return `**${sign}$${p.amount.toFixed(2)}**  ${p.payee}${cat}  →  ${acct}`;
 }
 
 // ---------------------------------------------------------------------------
-// Guard
+// Config error guard
+// ---------------------------------------------------------------------------
+function AccountMismatchWarning({
+  defaultAccount,
+  accounts,
+}: {
+  defaultAccount: string;
+  accounts: string[];
+}) {
+  const md = `# Account Mismatch
+
+**Default Account** \`"${defaultAccount}"\` is not in your **Accounts** list.
+
+Open **Extension Preferences** (⌘,) and either:
+- Correct the **Default Account** spelling, or
+- Add it to the **Accounts** list
+
+Your Accounts list: \`${accounts.join(" · ")}\``;
+
+  return (
+    <Detail
+      markdown={md}
+      actions={
+        <ActionPanel>
+          <Action
+            title="Open Extension Preferences"
+            onAction={openExtensionPreferences}
+          />
+        </ActionPanel>
+      }
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Accessibility / installation guard
 // ---------------------------------------------------------------------------
 function AccessibilityWarning({
   reason,
@@ -118,15 +210,19 @@ Open **System Settings → Privacy & Security → Accessibility** and enable **R
 // ---------------------------------------------------------------------------
 // Command
 // ---------------------------------------------------------------------------
-export default function QuickExpense() {
+export default function QuickExpense(
+  props: LaunchProps<{ arguments: { fallbackText: string } }>,
+) {
   const prefs = getPreferenceValues<Preferences>();
+  const fallbackText = props.arguments.fallbackText ?? "";
 
   const [ready, setReady] = useState<boolean | null>(null);
   const [guardReason, setGuardReason] = useState<
     "permissions" | "not-installed" | null
   >(null);
-  const [inputValue, setInputValue] = useState("");
+  const [inputValue, setInputValue] = useState(fallbackText);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const autoSubmittedRef = useRef(false);
 
   useEffect(() => {
     if (!isQuickenInstalled()) {
@@ -140,9 +236,32 @@ export default function QuickExpense() {
     }
   }, []);
 
+  // Auto-submit when launched via Fallback Command with a parseable argument
+  useEffect(() => {
+    if (ready !== true || !fallbackText || autoSubmittedRef.current) return;
+    if (!parseQuickExpense(fallbackText)) return;
+    autoSubmittedRef.current = true;
+    const timer = setTimeout(() => handleSubmit({ input: fallbackText }), 100);
+    return () => clearTimeout(timer);
+  }, [ready]);
+
   if (ready === null) return <Form isLoading />;
   if (!ready && guardReason)
     return <AccessibilityWarning reason={guardReason} />;
+
+  const accountList = prefs.accounts
+    .split(",")
+    .map((a) => a.trim())
+    .filter(Boolean);
+
+  if (!accountList.includes(prefs.defaultAccount.trim())) {
+    return (
+      <AccountMismatchWarning
+        defaultAccount={prefs.defaultAccount.trim()}
+        accounts={accountList}
+      />
+    );
+  }
 
   const parsed = parseQuickExpense(inputValue);
 
@@ -152,7 +271,7 @@ export default function QuickExpense() {
       await showToast({
         style: Toast.Style.Failure,
         title: "Could not parse",
-        message: 'Try: "$45 Starbucks :Food" or "+500 Paycheck :Income"',
+        message: diagnoseParseFailure(values.input),
       });
       return;
     }
@@ -165,7 +284,7 @@ export default function QuickExpense() {
 
     try {
       await enterTransaction({
-        account: prefs.defaultAccount,
+        account: p.account ?? prefs.defaultAccount,
         date: todayFormatted(),
         payee: p.payee,
         category: p.category,
@@ -181,7 +300,7 @@ export default function QuickExpense() {
 
       toast.style = Toast.Style.Success;
       toast.title = "Transaction saved";
-      toast.message = `${p.isExpense ? "−" : "+"}$${p.amount.toFixed(2)} · ${p.payee} → ${prefs.defaultAccount}`;
+      toast.message = `${p.isExpense ? "−" : "+"}$${p.amount.toFixed(2)} · ${p.payee} → ${p.account ?? prefs.defaultAccount}`;
     } catch (err: unknown) {
       toast.style = Toast.Style.Failure;
       toast.title = "Transaction failed";
@@ -208,6 +327,7 @@ export default function QuickExpense() {
         id="input"
         title="Transaction"
         placeholder="$45 Starbucks :Food & Dining"
+        defaultValue={fallbackText}
         onChange={setInputValue}
         autoFocus
       />
@@ -221,7 +341,7 @@ export default function QuickExpense() {
       ) : inputValue.length > 0 ? (
         <Form.Description
           title="Preview"
-          text='⚠️  Cannot parse — use "$amount Payee [:Category]"'
+          text={`⚠️  ${diagnoseParseFailure(inputValue)}`}
         />
       ) : null}
 
@@ -234,6 +354,7 @@ export default function QuickExpense() {
           "$12.50 Netflix :Subscriptions",
           "+2000 Paycheck :Income   (+ = income)",
           "$85 Grocery :Food & Dining",
+          "$45 Starbucks :Food @Visa   (@ = account override)",
         ].join("\n")}
       />
 

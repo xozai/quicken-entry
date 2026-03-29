@@ -38,6 +38,41 @@ interface FormValues {
 }
 
 // ---------------------------------------------------------------------------
+// Config error guard — shown when defaultAccount is not in the accounts list
+// ---------------------------------------------------------------------------
+function AccountMismatchWarning({
+  defaultAccount,
+  accounts,
+}: {
+  defaultAccount: string;
+  accounts: string[];
+}) {
+  const md = `# Account Mismatch
+
+**Default Account** \`"${defaultAccount}"\` is not in your **Accounts** list.
+
+Open **Extension Preferences** (⌘,) and either:
+- Correct the **Default Account** spelling, or
+- Add it to the **Accounts** list
+
+Your Accounts list: \`${accounts.join(" · ")}\``;
+
+  return (
+    <Detail
+      markdown={md}
+      actions={
+        <ActionPanel>
+          <Action
+            title="Open Extension Preferences"
+            onAction={openExtensionPreferences}
+          />
+        </ActionPanel>
+      }
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Accessibility / installation guard — shown before the main form
 // ---------------------------------------------------------------------------
 function AccessibilityWarning({
@@ -158,6 +193,15 @@ export default function AddTransaction() {
     .split(",")
     .map((a) => a.trim())
     .filter(Boolean);
+
+  if (!accounts.includes(prefs.defaultAccount.trim())) {
+    return (
+      <AccountMismatchWarning
+        defaultAccount={prefs.defaultAccount.trim()}
+        accounts={accounts}
+      />
+    );
+  }
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   async function handleSubmit(values: FormValues) {

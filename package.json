@@ -20,7 +20,15 @@
       "title": "Quick Expense",
       "subtitle": "Quicken",
       "description": "Enter a transaction with natural language, e.g. \"$45 Starbucks :Food\"",
-      "mode": "view"
+      "mode": "view",
+      "arguments": [
+        {
+          "name": "fallbackText",
+          "placeholder": "$45 Starbucks :Food",
+          "type": "text",
+          "required": false
+        }
+      ]
     }
   ],
   "preferences": [
@@ -56,6 +64,28 @@
       "type": "checkbox",
       "required": false,
       "default": false
+    },
+    {
+      "name": "skipTagField",
+      "title": "Tag Column",
+      "label": "My register has a Tag column between Category and Memo",
+      "description": "Disable if your Quicken register has no Tag column — otherwise field values will land in the wrong columns",
+      "type": "checkbox",
+      "required": false,
+      "default": true
+    },
+    {
+      "name": "uiDelay",
+      "title": "Automation Speed",
+      "description": "Slow down if transactions are entered with wrong values on a slower Mac",
+      "type": "dropdown",
+      "required": false,
+      "default": "normal",
+      "data": [
+        { "title": "Fast (0.15s)", "value": "fast" },
+        { "title": "Normal (0.30s)", "value": "normal" },
+        { "title": "Slow (0.60s)", "value": "slow" }
+      ]
     }
   ],
   "dependencies": {

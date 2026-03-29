@@ -15,7 +15,11 @@ type ExtensionPreferences = {
   /** Categories - Comma-separated list of Quicken categories for the dropdown */
   "categories"?: string,
   /** Quicken Window - When disabled, Quicken stays in the background after the transaction is saved */
-  "bringToForeground": boolean
+  "bringToForeground": boolean,
+  /** Tag Column - Disable if your Quicken register has no Tag column — otherwise field values will land in the wrong columns */
+  "skipTagField": boolean,
+  /** Automation Speed - Slow down if transactions are entered with wrong values on a slower Mac */
+  "uiDelay": "fast" | "normal" | "slow"
 }
 
 /** Preferences accessible in all the extension's commands */
@@ -32,6 +36,9 @@ declare namespace Arguments {
   /** Arguments passed to the `add-transaction` command */
   export type AddTransaction = {}
   /** Arguments passed to the `quick-expense` command */
-  export type QuickExpense = {}
+  export type QuickExpense = {
+  /** $45 Starbucks :Food */
+  "fallbackText": string
+}
 }
 
