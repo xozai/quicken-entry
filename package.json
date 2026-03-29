@@ -4,7 +4,7 @@
   "title": "Quicken Entry",
   "description": "Quickly enter transactions into Quicken for Mac without leaving your workflow",
   "icon": "extension-icon.png",
-  "author": "YOUR_RAYCAST_USERNAME",
+  "author": "jose_Leos",
   "categories": ["Finance"],
   "license": "MIT",
   "commands": [
